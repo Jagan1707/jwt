@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const verify = require('../middleware/auth')
+const moment = require('moment');
 
 
 router.post('/Register',async(req,res)=>{
@@ -62,16 +63,18 @@ router.post('/login',async(req,res)=>{
 
         let email = req.body.email
         let password = req.body.password
-
-        await userSchema.findOne({email:email}).then(data=>{
+        const time = moment().toISOString();
+        await userSchema.findOneAndUpdate({email:email},{latestVisted : time,loginStatus:true}).then(data=>{
            bcrypt.compare(password,data.password,function(err,result){
             if(err){
                 res.json({"err":err.message})
             }
             if(result){
                 const token = jwt.sign({data},process.env.JWTKEY,{expiresIn:'1h'});
-                console.log("token",token);
-                return res.json({status:"success",token})
+                console.log("token",time);
+                //sessionStorage.setItem('status',data.loginStatus)
+               return res.json({status:"success",token,"duration":time})
+               
             }else{
                 return res.json({status:"failure",message:"invalide password"})
             }
@@ -87,6 +90,51 @@ router.post('/login',async(req,res)=>{
     }
 })
 
+
+
+// const current_time = moment().toISOString();
+
+// const dd = "Sat Oct 15 2022 14:17:21 GMT+0530 (India Standard Time)"
+// const conv = new Date(dd).toISOString();
+// console.log("current",conv)
+// var startTime = moment(conv,"YYYY-MM-DD hh:mm:ss");
+// var endTime = moment(current_time, 'YYYY-MM-DD hh:mm:ss');
+// var duration = moment.duration(endTime.diff(startTime));
+// var hours = parseInt(duration.asHours());
+// var date = parseInt(duration.asDays())
+// var minutes = parseInt(duration.asMinutes()) % 60;
+// console.log(hours + ' hour and ' + minutes + ' minutes,' + date + 'days ||');
+
+
+router.post("/logout",(req,res)=>{
+    try {
+        const email = req.body.email;
+        const now = moment().toISOString();
+        userSchema.findOne({email:email}).then(result=>{
+            // const time = new Date(result.latestVisted).toISOString();
+            const loginTime = moment(result.latestVisted,"YYYY-MM-DD hh:mm:ss");
+            const current = moment(now,"YYYY-MM-DD hh:mm:ss");
+            const duration = moment.duration(current.diff(loginTime));
+            const hours = parseInt(duration.asHours());
+            const minutes = parseInt(duration.asMinutes()) % 60;
+            const days = parseInt(duration.asDays());
+            console.log(hours+" hours and "+minutes + " minutes "+ days+" days");
+            console.log("vist",result.latestVisted)
+         userSchema.findOneAndUpdate({email:email},{loginStatus:false,duration : hours+" hours and "+minutes + " minutes "},{new:true}).then(()=>{
+            console.log("success")
+         })
+            return res.json({status:"success",message:'logout success!',"login duration": hours+" hours and "+minutes + " minutes "+days+" days" })
+        }).catch(err=>{
+            console.log('err',err.message)
+            return res.json({"err":err.message})
+        })        
+    } catch (err) {
+        return res.json({"err":err.message})
+    }
+})
+
+
+
 router.get("/tokenVerify",async(req,res)=>{
     try{
         let token = req.header("token")
@@ -100,7 +148,7 @@ router.get("/tokenVerify",async(req,res)=>{
     }
 })
 
-router.get("/getUser",verify,async(req,res)=>{
+router.get("/getUser",async(req,res)=>{
     try{
         await userSchema.find().then(data=>{
             return res.json({status:"success","result":data})
@@ -126,6 +174,36 @@ router.get('/findone',verify,async(req,res)=>{
     }
 })
 
+router.put("/upadteData",async(req,res)=>{
+    try {
+        const email = req.body.email
+
+        userSchema.findOneAndUpdate({email:email},req.body).then(data=>{
+            res.json({status:"success","result":data})
+        }).catch(err=>{
+            res.json({status:"failure",message:err.message})
+        })
+    } catch (error) {
+        res.json({"err":error.message})
+    }
+})
+
+
+router.delete("/deleteData",async(req,res)=>{
+    try {
+    
+        const email = req.query.email
+        userSchema.findOneAndDelete({email:email}).then(del=>{
+            res.json({status:"success",message:"successfully deleted",del})
+        }).catch(err=>{
+            res.json({status:"failure",message:err.message})
+            console.log(err)
+        })
+    } catch (error) {
+        res.json({"err":error.message})
+        console.log(error.message)
+    }
+})
 
 
 

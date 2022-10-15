@@ -7,10 +7,12 @@ const userSchema = mongoose.Schema({
     phone       : {type:String,require:true},
     email       : {type:String,require:true},
     password    : {type:String,require:true},
+    age         : {type:Number,require:false},
     active      : {type:Boolean,require:false,default:false},
     address     : {type:String,require:false , default:'chennai-68'},
     latestVisted: {type:String,require:false},
-    loginStatus : {type:Boolean,require:false,default:true}
+    loginStatus : {type:Boolean,require:false,default:true},
+    duration    : {type:String,require:false}
 })
 
 
