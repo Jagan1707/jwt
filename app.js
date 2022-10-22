@@ -7,9 +7,12 @@ const app = express();
 const user = require('./routes/user.route');
 const multer = require('multer');
 const path = require('path');
-const convert = require('csv-converter-to-pdf-and-html')
+const convert = require('csv-converter-to-pdf-and-html');
+const {nanoid} = require("nanoid");
 
 app.use(express.static("pubilc/upload"));
+
+const {sendMail} = require('./middleware/sendmail');
 
 
 
@@ -23,6 +26,12 @@ const storage = multer.diskStorage({
 })
 
 const upload = multer({storage:storage}).array('file')
+
+app.get('/mail',async(req,res)=>{
+    sendMail();
+    res.send('success');
+})
+
 
 app.post('/',async(req,res)=>{
 
@@ -94,9 +103,14 @@ mongoose.connect(process.env.DBURL,{
 app.use('/user',user)
 
 
-
+const shordcode = nanoid(6).toUpperCase();
+console.log("code",shordcode);
 
 const port = process.env.PORT
 app.listen(port,()=>{
     console.log(`Server running this Port ${port} `)
 })
+
+
+
+
